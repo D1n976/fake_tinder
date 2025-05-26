@@ -64,6 +64,23 @@ venv.bak/
 *.sqlite3
 *.db
 
+# Media / uploaded images (пример)
+/media/
+/uploads/
+/static/images/
+/staticfiles/
+
+# Thumbnails or cached images
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*thumbnail*.jpg
+*thumbnail*.png
+resized_*
+processed_*
+
 # dotenv
 .env
 
