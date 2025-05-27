@@ -30,6 +30,10 @@ def get_choice_to_view_liked_users() :
     )
     return builder.as_markup()
 
-def create_message_bot_link(message_id) : return InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Перейти в переписку", url="https://t.me/my_helper_bot", callback_data=f'session_{message_id}')]
-])
+def create_message_bot_link(session_id) :
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        InlineKeyboardButton(text="Начать переписку", callback_data=f"session_{session_id}_start"),
+        InlineKeyboardButton(text="Остановить переписку", callback_data=f"session_{session_id}_stop")
+    )
+    return builder.as_markup()

@@ -7,4 +7,3 @@ async def main():
     await dt.start_con()
     await messanger.start_bot()
     await finder.start_bot()
-

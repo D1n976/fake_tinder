@@ -1,6 +1,10 @@
 from aiogram import Router, types, Bot, Dispatcher
-from aiogram.filters.command import Command
+from aiogram.filters import CommandStart
+from aiogram.filters.command import Command, CommandObject
 from datetime import datetime
+
+from pyexpat.errors import messages
+
 import Finder.utils.utils as ut
 import os
 from aiogram.fsm.storage.base import StorageKey
@@ -19,6 +23,7 @@ router = Router()
 def get_profile_str(profile_info) :
         return f'Я {profile_info[-1][3]}, {profile_info[-1][8]}\n'\
                f'Живу в {profile_info[-1][-1]}\n'f'{profile_info[-1][6]}'
+
 @router.message(F.text.lower() == 'назад')
 async def start(message: types.Message):
     await message.answer("Перемещаю в меню", reply_markup=kb.main_keyboard)
@@ -154,16 +159,6 @@ async def handle_vote_like(message: types.Message, bot : Bot, state : FSMContext
         await message.answer_photo(photo=types.FSInputFile(next_user[-1][7]), caption=get_profile_str(next_user), reply_markup=kb.viewing_profiles_keyboard)
     await state.set_state(ut.BotStates.none)
 
-@router.callback_query(F.data.startswith('liked_'))
-async def handle_reply_to_like(call: types.CallbackQuery, state : FSMContext) :
-    sym = call.data.split('_')
-    if sym[1] == 'show':
-        await state.set_state(BotStates.reply_to_like)
-        reacted_user = get_full_info(get_reacted_users(call.from_user.id)[-1][1])
-        await call.message.answer_photo(photo=types.FSInputFile(reacted_user[-1][7]), caption=get_profile_str(reacted_user), reply_markup=kb.viewing_profiles_keyboard)
-    elif sym[1] == 'unshow' :
-        await state.set_state(ut.BotStates.none)
-
 @router.message(lambda msg: msg.text in ["❤️ Лайк", "❌ Пропустить"], ut.BotStates.reply_to_like)
 async def handle_reply_to_like(message : types.Message, state : FSMContext, bot : Bot) :
     liked_users = get_reacted_users(message.from_user.id)
@@ -188,3 +183,61 @@ async def handle_reply_to_like(message : types.Message, state : FSMContext, bot 
 
     await message.answer_photo(photo=types.FSInputFile(reacted_user[-1][7]), caption=get_profile_str(reacted_user),
                                    reply_markup=kb.viewing_profiles_keyboard)
+
+
+@router.callback_query(F.data.startswith('liked_'))
+async def handle_reply_to_like(call: types.CallbackQuery, state : FSMContext) :
+    sym = call.data.split('_')
+    if sym[1] == 'show':
+        await state.set_state(BotStates.reply_to_like)
+        reacted_user = get_full_info(get_reacted_users(call.from_user.id)[-1][1])
+        await call.message.answer_photo(photo=types.FSInputFile(reacted_user[-1][7]), caption=get_profile_str(reacted_user), reply_markup=kb.viewing_profiles_keyboard)
+    elif sym[1] == 'unshow' :
+        await state.set_state(ut.BotStates.none)
+
+@router.callback_query(F.data.startswith('session_'))
+async def handle_start_messanger(call: types.CallbackQuery, bot: Bot) :
+    parts = call.data.split("_")
+    session_id, action = parts[1], parts[2]
+    is_session_request_to_readiness = (action == 'start')
+
+    session = get_session(session_id)
+    first_user = get_full_info_with_user_id(session[1])
+    second_user = get_full_info_with_user_id(session[2])
+
+    if first_user[1] == call.message.from_user.id:
+        confirm_user_readiness(session, first_user[0], is_session_request_to_readiness)
+        user_to_request = second_user
+        selected_user = first_user
+    elif second_user[1] == call.message.from_user.id:
+        confirm_user_readiness(session, first_user[1], is_session_request_to_readiness)
+        user_to_request = first_user
+        selected_user = second_user
+    else:
+        await call.message.answer("Вы не участвуете в этой сессии.")
+        return
+
+    if not user_to_request:
+        await call.message.answer("Не удалось определить собеседника.")
+        return
+
+    if is_session_request_to_readiness:
+        await bot.send_message(
+            user_to_request[1],
+            text=f"Пользователь {selected_user[3]} присоединился к чату",
+            reply_markup=kb.create_message_bot_link(session_id)
+        )
+        await call.message.answer(
+            text=f'Вы присоединились к чату c {user_to_request[3]}',
+            reply_markup=kb.create_message_bot_link(session_id)
+        )
+    else:
+        await bot.send_message(
+            user_to_request[1],
+            text=f"Пользователь {selected_user[3]} вышел из чата",
+            reply_markup=kb.create_message_bot_link(session_id)
+        )
+        await call.message.answer(
+            text=f'Вы вышли из чата c {user_to_request[3]}',
+            reply_markup=kb.viewing_profiles_keyboard
+        )

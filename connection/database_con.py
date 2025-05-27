@@ -5,7 +5,7 @@ def execute_request(operation, params, fetch = False) :
     result = None
     try :
         with connect(
-                host=os.getenv("DB_HOST"),
+            host=os.getenv("DB_HOST"),
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
             database=os.getenv("DB_NAME")
@@ -189,5 +189,18 @@ def react_to_like(user_id, liked_user, is_like) :
 
 def get_reacted_users(telegram_id) :
     user_id = get_full_info(telegram_id)[0][0]
-    return execute_request("SELECT * FROM users WHERE ID = (SELECT user_id FROM like_request WHERE like_user_id = %s)",
+    return execute_request("SELECT * FROM users WHERE ID IN (SELECT user_id FROM like_request WHERE like_user_id = %s)",
                            (user_id,), fetch=True)
+
+def get_session(session_id) :
+    return execute_request(""
+                           "SELECT * FROM session WHERE ID = %s", (session_id,), fetch=True)
+
+def confirm_user_readiness(session, user_id, is_readiness) :
+    # first user
+    if session[1] == user_id :
+        execute_request("UPDATE session SET is_first_person_compired = %s", (is_readiness,))
+    elif session[2] == user_id :
+        execute_request("UPDATE session SET is_second_person_compired = %s", (is_readiness,))
+
+
