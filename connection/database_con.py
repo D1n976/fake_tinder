@@ -169,15 +169,31 @@ def request_user_like(telegram_id, is_like) :
                         (user[0][0], selected_user[0][0]))
     return {'user' : user, 'liked_user' : selected_user}
 
-def create_session(first_user_id, second_user_id):
-    execute_request("INSERT INTO sessions (first_user_id, second_user_id, session_created_at) VALUES (%s, %s, NOW())",
-                    (first_user_id, second_user_id))
-    return execute_request("SELECT LAST_INSERT_ID()", (), fetch=True)
+def create_session(from_user_id, to_user_id):
+    with connect(
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME")
 
-def start_session(first_user_id, second_user_id) :
-    pass
+    ) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO sessions (from_user_id, to_user_id) VALUES (%s, %s)",
+                (from_user_id, to_user_id)
+            )
+            cursor.execute("SELECT LAST_INSERT_ID()")
+            result = cursor.fetchone()
+            session_id = result[0] if result else None
+            conn.commit()
+            return session_id
 
-def stop_session() :
+def get_reacted_users(telegram_id) :
+    user_id = get_full_info(telegram_id)[0][0]
+    return execute_request("SELECT * FROM users WHERE ID IN (SELECT user_id FROM like_request WHERE like_user_id = %s)",
+                           (user_id,), fetch=True)
+
+def stop_session(from_user_id) :
     pass
 
 def react_to_like(user_id, liked_user, is_like) :
@@ -186,21 +202,9 @@ def react_to_like(user_id, liked_user, is_like) :
     execute_request("DELETE FROM like_request WHERE user_id = %s AND like_user_id = %s",
                     (liked_user, user_id))
 
-
-def get_reacted_users(telegram_id) :
-    user_id = get_full_info(telegram_id)[0][0]
-    return execute_request("SELECT * FROM users WHERE ID IN (SELECT user_id FROM like_request WHERE like_user_id = %s)",
-                           (user_id,), fetch=True)
-
-def get_session(session_id) :
+def get_session(from_user_id):
     return execute_request(""
-                           "SELECT * FROM session WHERE ID = %s", (session_id,), fetch=True)
+                           "SELECT * FROM sessions WHERE from_user_id = %s", (from_user_id,), fetch=True)
 
-def confirm_user_readiness(session, user_id, is_readiness) :
-    # first user
-    if session[1] == user_id :
-        execute_request("UPDATE session SET is_first_person_compired = %s", (is_readiness,))
-    elif session[2] == user_id :
-        execute_request("UPDATE session SET is_second_person_compired = %s", (is_readiness,))
-
-
+def remove_all_session_with(user_id) :
+    execute_request("DELETE FROM sessions WHERE from_user_id = %s", (user_id,))

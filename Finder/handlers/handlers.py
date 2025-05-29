@@ -174,13 +174,11 @@ async def handle_reply_to_like(message : types.Message, state : FSMContext, bot 
     is_liked = True if message.text == '❤️ Лайк' else False
     react_to_like(my_self_user[-1][0], reacted_user[-1][0], is_liked)
     if is_liked:
-        session_id = create_session(my_self_user[0][0], reacted_user[0][0])
         await message.answer_photo(photo=types.FSInputFile(reacted_user[-1][7]), caption=f'У вас взаимная симпатия\n{get_profile_str(reacted_user)}\n',
-                                   reply_markup=kb.create_message_bot_link(session_id))
+                                   reply_markup=kb.create_message_bot_link(reacted_user[-1][1]))
         await bot.send_photo(reacted_user[-1][1], photo=types.FSInputFile(my_self_user[-1][7]), caption=f'У вас взаимная симпатия\n{get_profile_str(my_self_user)}',
-                             reply_markup=kb.create_message_bot_link(session_id))
+                             reply_markup=kb.create_message_bot_link(my_self_user[-1][1]))
         return
-
     await message.answer_photo(photo=types.FSInputFile(reacted_user[-1][7]), caption=get_profile_str(reacted_user),
                                    reply_markup=kb.viewing_profiles_keyboard)
 
@@ -196,48 +194,15 @@ async def handle_reply_to_like(call: types.CallbackQuery, state : FSMContext) :
         await state.set_state(ut.BotStates.none)
 
 @router.callback_query(F.data.startswith('session_'))
-async def handle_start_messanger(call: types.CallbackQuery, bot: Bot) :
+async def handle_start_messanger(call: types.CallbackQuery) :
     parts = call.data.split("_")
-    session_id, action = parts[1], parts[2]
-    is_session_request_to_readiness = (action == 'start')
-
-    session = get_session(session_id)
-    first_user = get_full_info_with_user_id(session[1])
-    second_user = get_full_info_with_user_id(session[2])
-
-    if first_user[1] == call.message.from_user.id:
-        confirm_user_readiness(session, first_user[0], is_session_request_to_readiness)
-        user_to_request = second_user
-        selected_user = first_user
-    elif second_user[1] == call.message.from_user.id:
-        confirm_user_readiness(session, first_user[1], is_session_request_to_readiness)
-        user_to_request = first_user
-        selected_user = second_user
-    else:
-        await call.message.answer("Вы не участвуете в этой сессии.")
+    user = get_full_info(telegram_id=call.from_user.id)
+    reacted_user = get_full_info(telegram_id=parts[2])
+    if not user or not user[0] :
+        return
+    if not reacted_user or not reacted_user[0] :
         return
 
-    if not user_to_request:
-        await call.message.answer("Не удалось определить собеседника.")
-        return
-
-    if is_session_request_to_readiness:
-        await bot.send_message(
-            user_to_request[1],
-            text=f"Пользователь {selected_user[3]} присоединился к чату",
-            reply_markup=kb.create_message_bot_link(session_id)
-        )
-        await call.message.answer(
-            text=f'Вы присоединились к чату c {user_to_request[3]}',
-            reply_markup=kb.create_message_bot_link(session_id)
-        )
-    else:
-        await bot.send_message(
-            user_to_request[1],
-            text=f"Пользователь {selected_user[3]} вышел из чата",
-            reply_markup=kb.create_message_bot_link(session_id)
-        )
-        await call.message.answer(
-            text=f'Вы вышли из чата c {user_to_request[3]}',
-            reply_markup=kb.viewing_profiles_keyboard
-        )
+    remove_all_session_with(user[-1][0])
+    if parts[1] == 'start':
+        create_session(user[-1][0], reacted_user[-1][0])
