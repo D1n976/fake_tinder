@@ -1,19 +1,11 @@
-from aiogram import Router, types, Bot, Dispatcher
-from aiogram.filters import CommandStart
-from aiogram.filters.command import Command, CommandObject
-from datetime import datetime
+from aiogram import Router, types, Bot
+from aiogram.filters.command import Command
 
-from pyexpat.errors import messages
-
-import Finder.utils.utils as ut
-import os
+import utils as ut
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.context import FSMContext
-from io import BytesIO
 
-from aiogram.types import InputFile, InlineKeyboardMarkup
-
-from Finder.utils.utils import BotStates
+from utils.utils import BotStates
 from connection.database_con import *
 from Finder.keyboards import keyboards as kb
 from aiogram import F
@@ -23,19 +15,17 @@ router = Router()
 def get_profile_str(profile_info) :
         return f'Я {profile_info[-1][3]}, {profile_info[-1][8]}\n'\
                f'Живу в {profile_info[-1][-1]}\n'f'{profile_info[-1][6]}'
+def is_user_valid(user) :
+    return user[2] and user[3] and user[4] and user[5] and user[6] and user[7] and user[8]
 
 @router.message(F.text.lower() == 'назад')
 async def start(message: types.Message):
     await message.answer("Перемещаю в меню", reply_markup=kb.main_keyboard)
 
-@router.message(Command('start'))
-async def start(message: types.Message):
-    add_user(telegram_name=message.from_user.username, telegram_id=message.from_user.id)
-    await message.answer("Привет! Твоя анкета добавлена.", reply_markup=kb.main_keyboard)
 
 @router.message(F.text.lower() == 'мой профиль')
 async def fill_profile(message: types.Message) :
-    await message.reply(text='Привет', reply_markup=kb.profile_keyboard)
+    await message.reply(text='Настроить профиль', reply_markup=kb.profile_keyboard)
 
 
 ####################### Смена псевдонима ##################################
@@ -46,23 +36,29 @@ async def change_user_name_request(message: types.Message, state : FSMContext) :
 
 @router.message(ut.BotStates.change_nick_state, F.text)
 async def process_nick(message : types.Message, state : FSMContext) :
-    update_user_name(message.from_user.id, message.text)
-    await message.answer('Сколько вам лет ?')
-    await state.set_state(ut.BotStates.change_age)
+    nick = message.text
+    if nick and nick != '' :
+        update_user_name(message.from_user.id, nick)
+        await message.answer('Сколько вам лет ?')
+        await state.set_state(ut.BotStates.change_age)
+    else :
+        await message.answer('Ник пустой или введенные данные некоректные')
 ####################### Смена псевдонима ##################################
 
 ####################### Возраст ##################################
 @router.message(ut.BotStates.change_age, F.text)
 async def process_age(message : types.Message, state : FSMContext) :
-    update_age(message.from_user.id, message.text)
-    await message.answer('Где вы живете : ')
-    await state.set_state(ut.BotStates.change_country)
+    age = message.text
+    if ut.is_number(age) :
+        update_age(message.from_user.id, message.text)
+        await message.answer('Где вы живете : ')
+        await state.set_state(ut.BotStates.change_country)
 ####################### Возраст ##################################
 
 
 ####################### Страна ##################################
 @router.message(ut.BotStates.change_country, F.text)
-async def process_age(message : types.Message, state : FSMContext) :
+async def process_country(message : types.Message, state : FSMContext) :
     update_country(message.from_user.id, message.text)
     await message.answer('Прикрепите фото : ')
     await state.set_state(ut.BotStates.change_photo)
@@ -70,9 +66,11 @@ async def process_age(message : types.Message, state : FSMContext) :
 ####################### Страна ##################################
 
 ####################### Смена фото ##################################
-@router.message(ut.BotStates.change_photo, F.photo)
+@router.message(ut.BotStates.change_photo)
 async def process_photo(message : types.Message, state : FSMContext, bot : Bot) :
-    # await state.set_state(BotStates.none)
+    if message.photo is None :
+        await message.answer('Фото задано неправильно, попробуйте снова!')
+        return
     photo = message.photo[-1]
     file = await bot.get_file(photo.file_id)
     file_path = file.file_path
@@ -90,7 +88,6 @@ async def process_photo(message : types.Message, state : FSMContext, bot : Bot) 
 ####################### Смена описания ##################################
 @router.message(ut.BotStates.change_description, F.text)
 async def process_description(message : types.Message, state : FSMContext) :
-    # await state.set_state(BotStates.none)
     update_user_description(message.from_user.id, message.text)
     await message.answer('Описание успешно обновлено : ')
     await state.set_state(ut.BotStates.change_genre)
@@ -106,7 +103,6 @@ async def process_genre(message: types.Message, state : FSMContext) :
     genre_map = {int(x[0]) : x[1] for x in get_genres()}
     gen_num = int(message.text.strip())
     if genre_map.get(gen_num) :
-        # await state.set_state(BotStates.none)
         update_genre(message.from_user.id, gen_num)
         await state.set_state(ut.BotStates.change_genre_like)
         await message.answer(f'Кого будем искать?\n{''.join([str(f"{x[0]} - {x[1]}\n") for x in get_genres()])}')
@@ -118,6 +114,10 @@ async def process_genre(message: types.Message, state : FSMContext) :
 ####################### Выбираем какой ленолиум нравится ##################################
 @router.message(ut.BotStates.change_genre_like, F.text)
 async def process_genre_like(message: types.Message, state : FSMContext) :
+    # if not ut.is_number(message.text) :
+    #     await message.answer('Такого пола нет в списке\nПопробуйте снова')
+    #     return
+
     genre_map = {int(x[0]): x[1] for x in get_genres()}
     gen_num = int(message.text.strip())
     if genre_map.get(gen_num) :
@@ -129,12 +129,17 @@ async def process_genre_like(message: types.Message, state : FSMContext) :
 ####################### Выбираем какой ленолиум нравится ##################################
 
 @router.message(F.text.lower() == 'о себе')
-async def look_at_me(message : types.Message) :
+async def look_at_me(message : types.Message, state : FSMContext) :
     info = get_full_info(telegram_id=message.from_user.id)
     await message.answer_photo(photo=types.FSInputFile(info[-1][7]), caption=get_profile_str(info))
+    await state.set_state(ut.BotStates.none)
 
 @router.message(F.text == 'Анкеты')
 async def view_profile_reply(message : types.Message, state : FSMContext) :
+    user = get_full_info(message.from_user.id)
+    if not user or not user[0] or not is_user_valid(user[0]) :
+        await message.answer('У вас не настроен профиль')
+        return
     user_profile = get_profile_of_selected_user(message.from_user.id)
     if user_profile and user_profile[0] :
         await message.answer_photo(photo=types.FSInputFile(user_profile[-1][7]), caption=get_profile_str(user_profile), reply_markup=kb.viewing_profiles_keyboard)
@@ -184,13 +189,14 @@ async def handle_reply_to_like(message : types.Message, state : FSMContext, bot 
 
 
 @router.callback_query(F.data.startswith('liked_'))
-async def handle_reply_to_like(call: types.CallbackQuery, state : FSMContext) :
+async def handle_reply_to_like(call: types.CallbackQuery, state : FSMContext, bot : Bot) :
     sym = call.data.split('_')
     if sym[1] == 'show':
         await state.set_state(BotStates.reply_to_like)
         reacted_user = get_full_info(get_reacted_users(call.from_user.id)[-1][1])
         await call.message.answer_photo(photo=types.FSInputFile(reacted_user[-1][7]), caption=get_profile_str(reacted_user), reply_markup=kb.viewing_profiles_keyboard)
     elif sym[1] == 'unshow' :
+        delete_request_likes(telegram_id=call.from_user.id)
         await state.set_state(ut.BotStates.none)
 
 @router.callback_query(F.data.startswith('session_'))
@@ -202,7 +208,6 @@ async def handle_start_messanger(call: types.CallbackQuery) :
         return
     if not reacted_user or not reacted_user[0] :
         return
-
     remove_all_session_with(user[-1][0])
     if parts[1] == 'start':
         create_session(user[-1][0], reacted_user[-1][0])

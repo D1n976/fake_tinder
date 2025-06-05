@@ -31,9 +31,23 @@ def get_choice_to_view_liked_users() :
     return builder.as_markup()
 
 def create_message_bot_link(reacted_user_telegram_id) :
-    builder = InlineKeyboardBuilder()
-    builder.add(
-        InlineKeyboardButton(text="Начать переписку", callback_data=f"session_start_{reacted_user_telegram_id}"),
-        InlineKeyboardButton(text="Остановить переписку", callback_data=f"session_stop_{reacted_user_telegram_id}")
-    )
-    return builder.as_markup()
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Начать переписку", callback_data=f"session_start_{reacted_user_telegram_id}"),
+        InlineKeyboardButton(text="Остановить переписку", callback_data=f"session_stop_{reacted_user_telegram_id}")],
+        [InlineKeyboardButton(text='Перейти в бота', url='https://t.me/minimessenger_bot')]
+    ])
+
+more_options_keyboard = ReplyKeyboardMarkup(keyboard=
+                                    [
+                                        [KeyboardButton(text="Получить погоду по списку стран")],
+                                        [KeyboardButton(text="Получить погоду по координатам", request_location=True)],
+                                        [KeyboardButton(text="Получить кота")]
+                                    ]
+    , resize_keyboard=True)
+
+def get_keyboard(counter, key_board_opt):
+    inline_keyboard = [[InlineKeyboardButton(text=x, callback_data=f'{key_board_opt}{x}')]
+                       for x in counter.get_data()]
+    inline_keyboard.append([InlineKeyboardButton(text='Назад',callback_data=f'{key_board_opt}back'),
+                            InlineKeyboardButton(text='Вперед', callback_data=f'{key_board_opt}next')])
+    return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)

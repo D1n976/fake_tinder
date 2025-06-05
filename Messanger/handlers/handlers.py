@@ -1,17 +1,5 @@
-from aiogram import Router, types, Bot, Dispatcher
-from aiogram.filters import CommandStart
-from aiogram.filters.command import Command
+from aiogram import Router, types, Bot
 from connection.database_con import *
-from datetime import datetime
-
-from pyexpat.errors import messages
-import os
-from aiogram.fsm.storage.base import StorageKey
-from aiogram.fsm.context import FSMContext
-from io import BytesIO
-
-from aiogram.types import InputFile, InlineKeyboardMarkup
-
 from aiogram import F
 
 router = Router()

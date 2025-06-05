@@ -1,15 +1,10 @@
 import os
 from aiogram import Bot, Dispatcher
-from dotenv import *
-import logging
 from Messanger.handlers.handlers import router
-
+import utils.utils as ut
 async def run_bot():
 
-    load_dotenv(find_dotenv())
-    logging.basicConfig(level=logging.INFO)
-
-    bot = Bot(token=os.getenv('MESSANGER_BOT_TOKEN'))
+    bot = Bot(token=ut.config['bot']['MESSANGER_BOT_TOKEN'])
     dp = Dispatcher()
     dp.include_router(router)
 

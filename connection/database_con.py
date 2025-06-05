@@ -1,15 +1,15 @@
 from mysql.connector import connect, Error
 import os
+import utils.utils as ut
 
 def execute_request(operation, params, fetch = False) :
     result = None
     try :
         with connect(
-            host=os.getenv("DB_HOST"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            database=os.getenv("DB_NAME")
-
+            host=ut.config['paths']['DB_HOST'],
+            user=ut.config['paths']['DB_USER'],
+            password=ut.config['paths']["DB_PASSWORD"],
+            database=ut.config['paths']['DB_NAME']
         ) as connection:
             with connection.cursor() as cur:
                 cur.execute(operation, params)
@@ -160,7 +160,6 @@ def get_next_profile(telegram_id):
 def request_user_like(telegram_id, is_like) :
     user = get_full_info(telegram_id)
     selected_user = get_full_info(get_profile_of_selected_user(telegram_id)[0][1])
-    print(user, selected_user)
     if not is_like :
         execute_request("DELETE FROM like_request WHERE user_id = %s AND like_user_id = %s",
                         (user[0][0], selected_user[0][0]))
@@ -168,6 +167,12 @@ def request_user_like(telegram_id, is_like) :
         execute_request("INSERT INTO like_request (user_id, like_user_id) VALUES (%s, %s)",
                         (user[0][0], selected_user[0][0]))
     return {'user' : user, 'liked_user' : selected_user}
+
+def delete_request_likes(telegram_id) :
+    user = get_full_info(telegram_id)
+    execute_request("DELETE FROM like_request WHERE like_user_id = %s",
+                        (user[0][0],))
+
 
 def create_session(from_user_id, to_user_id):
     with connect(

@@ -83,6 +83,7 @@ processed_*
 
 # dotenv
 .env
+.yaml
 
 # OS generated
 .DS_Store
