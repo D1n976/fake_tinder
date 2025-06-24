@@ -27,3 +27,11 @@ def is_number(s):
 
 with open("config.yaml", "r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
+
+
+def get_profile_str(profile_info) :
+        return f'Я {profile_info[-1][3]}, {profile_info[-1][8]}\n'\
+               f'Живу в {profile_info[-1][-1]}\n'f'{profile_info[-1][6]}'
+
+def is_user_valid(user) :
+    return user[2] and user[3] and user[4] and user[5] and user[6] and user[7] and user[8]

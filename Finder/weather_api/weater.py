@@ -1,7 +1,6 @@
 import requests
-from dotenv import *
-import os
 import utils.utils as ut
+import json
 
 def get_weather_of_city(city) :
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={ut.config['api']['weather_api']}&units=metric"
@@ -34,5 +33,12 @@ def get_weather_of_location(lat, lon) :
           f"Влажность: {humidity}%\n"        f"Скорость ветра: {wind_speed} м/с\n"
           f"Описание: {description}")
 
-countries = [ 'Russia', 'Japan', 'USA', 'Колумбия', 'Бразилия' ]
-city_by_country = { 'Russia' : ['Moscow', 'Saint Petersburg'], 'Japan' : [], 'USA' : [], 'Колумбия' : [], 'Бразилия' : [] }
+def get_countries() :
+    with open('temp/countries.json') as f :
+        reader = json.load(f)
+        return [x['country'] for x in reader]
+
+def get_city_by_country(country):
+    with open('temp/countries.json') as f:
+        reader = json.load(f)
+        return [x['cities'] for x in reader if x['country'] == country][0]

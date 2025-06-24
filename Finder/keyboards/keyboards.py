@@ -41,7 +41,8 @@ more_options_keyboard = ReplyKeyboardMarkup(keyboard=
                                     [
                                         [KeyboardButton(text="Получить погоду по списку стран")],
                                         [KeyboardButton(text="Получить погоду по координатам", request_location=True)],
-                                        [KeyboardButton(text="Получить кота")]
+                                        [KeyboardButton(text="Получить кота")],
+                                        [KeyboardButton(text='Назад')]
                                     ]
     , resize_keyboard=True)
 

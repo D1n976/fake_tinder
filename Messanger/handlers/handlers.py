@@ -15,13 +15,10 @@ async def forward_message(message: types.Message, bot : Bot) :
     if not session or not session[0] :
         return
 
-    #Проверяем, общается ли с нами другой человек
     to_user = get_full_info_with_user_id(session[-1][1])
     reversed_session = get_session(to_user[-1][0])
     if not reversed_session or not reversed_session[0] :
         return
 
-    #Если все нормально, пересылаем ему сообщения
     await bot.send_message(to_user[-1][1], text=f'{user[-1][3]}\n{message.text}')
-
 

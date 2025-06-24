@@ -1,5 +1,4 @@
 from mysql.connector import connect, Error
-import os
 import utils.utils as ut
 
 def execute_request(operation, params, fetch = False) :
@@ -109,6 +108,7 @@ def get_profile_of_selected_user(telegram_id) :
 #compare genres
 def is_user_suitable(user, to_user):
     return user[-1][5] == to_user[-1][4]
+
 def get_next_profile(telegram_id):
     users = execute_request("SELECT * FROM users", (), fetch=True)
     if not users:
@@ -148,7 +148,7 @@ def get_next_profile(telegram_id):
             counter += 1
             continue
 
-        if user_request[5] == user[4]:  # genre_like == genre
+        if ut.is_user_valid(user) and ((user_request[5] == user[4] and user_request[5] != 3) or user_request[5] == 3):  # genre_like == genre
             set_selected_user_request(user_request[0], user[0])
             return get_full_info_with_user_id(user[0])
 
@@ -176,11 +176,10 @@ def delete_request_likes(telegram_id) :
 
 def create_session(from_user_id, to_user_id):
     with connect(
-            host=os.getenv("DB_HOST"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            database=os.getenv("DB_NAME")
-
+            host=ut.config['paths']['DB_HOST'],
+            user=ut.config['paths']['DB_USER'],
+            password=ut.config['paths']["DB_PASSWORD"],
+            database=ut.config['paths']['DB_NAME']
     ) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -198,7 +197,7 @@ def get_reacted_users(telegram_id) :
     return execute_request("SELECT * FROM users WHERE ID IN (SELECT user_id FROM like_request WHERE like_user_id = %s)",
                            (user_id,), fetch=True)
 
-def stop_session(from_user_id) :
+async def stop_session(user) :
     pass
 
 def react_to_like(user_id, liked_user, is_like) :
