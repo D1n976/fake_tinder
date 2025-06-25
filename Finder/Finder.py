@@ -8,7 +8,6 @@ import Finder.handlers.commands as commands
 import Finder.handlers.weather_handlers as wh
 from apscheduler.schedulers.asyncio import *
 import Finder.handlers.logging as log
-import Finder.handlers.logs_handlers as log_h
 
 bot = Bot(token=ut.config['bot']['FINDER_BOT_TOKEN'])
 dp = Dispatcher(storage=ut.storage)
@@ -33,6 +32,5 @@ async def start_bot():
     dp.include_router(commands.router)
     dp.include_router(wh.router)
     dp.include_router(log.router)
-    dp.include_router(log_h.router)
 
     await dp.start_polling(bot)

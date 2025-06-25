@@ -1,6 +1,7 @@
 from aiogram import Router, types, Bot
 from connection.database_con import *
 from aiogram import F
+import os
 
 router = Router()
 
@@ -21,4 +22,13 @@ async def forward_message(message: types.Message, bot : Bot) :
         return
 
     await bot.send_message(to_user[-1][1], text=f'{user[-1][3]}\n{message.text}')
+
+    path = f'bot_logs/dialog_{message.from_user.id}_with_{to_user[-1][1]}_log'
+    log_info = f'{message.date}\n{message.from_user.id}\n{message.text}\n'
+    if not os.path.exists(path) :
+        with open(path, 'x', encoding='UTF-8') as f :
+            f.write(log_info)
+    else :
+        with open(path, 'a', encoding='UTF-8') as f:
+            f.write(log_info)
 
