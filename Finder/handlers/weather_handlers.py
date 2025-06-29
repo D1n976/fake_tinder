@@ -21,8 +21,7 @@ async def get_weather_menu(message : types.Message) :
 
 @router.message(F.text.lower() == 'получить кота')
 async def get_cat(message : types.Message) :
-    res = requests.get(url='https://cataas.com/cat')
-    await message.answer_photo(photo=res.content)
+    await message.answer_photo(photo=types.FSInputFile('temp/cat.jpg'))
 
 @router.message(F.location)
 async def get_weather_from_location(message : types.Message) :
